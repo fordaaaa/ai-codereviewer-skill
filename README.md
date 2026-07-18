@@ -1,6 +1,9 @@
 # ai-codereviewer-skill
 
-Claude Code slash commands for running parallel, severity-ranked code reviews and turning the results into fixed, PR'd code.
+Slash commands for running parallel, severity-ranked code reviews and turning the results into fixed, PR'd code.
+
+- **Claude Code users:** use `.claude/commands/` — `/cr-run` and `/cr-fix` work out of the box with auto-discovery.
+- **Any other tool** (Cursor, Aider, Codex, ChatGPT, etc.): use the plain-text prompts in [`prompts/`](prompts/) — copy-paste `prompts/cr-run.md` or `prompts/cr-fix.md`, filling in the `{{LEVEL}}` / `{{ISSUES}}` placeholder, into your tool of choice. Same logic, no Claude Code-specific syntax.
 
 ## Commands
 
