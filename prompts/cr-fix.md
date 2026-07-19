@@ -22,7 +22,13 @@ Read the referenced file:line and surrounding context for each issue. Confirm it
 
 ## Step 2 — branch
 
-Create a new branch per PR-worthy group, e.g. `fix/<short-slug>`. Never commit directly to the main/default branch.
+All fixes go through a shared `codereview` integration branch instead of branching straight off the default branch:
+
+- If `codereview` already exists (local or remote), check it out and bring it up to date with the default branch (fast-forward if possible; confirm before force-updating if it's diverged).
+- If it doesn't exist, create it from the current default branch: `git checkout -b codereview main` (adjust `main` if the default branch has another name).
+- Branch each PR-worthy group off `codereview`, e.g. `fix/<short-slug>`, and target the eventual PR/MR at `codereview`, not the default branch.
+
+Never commit directly to the default branch or to `codereview` itself — always work on a `fix/<short-slug>` branch on top of it.
 
 ## Step 3 — fix
 
@@ -34,17 +40,18 @@ Actually exercise the change (run tests, run the affected code path) rather than
 
 ## Step 5 — commit and PR
 
-Commit with a message explaining why, referencing `Fixes #<n>` so the host (GitHub/GitLab/etc.) auto-links/closes the issue on merge. Push the branch and open a PR/MR with a body listing which issue(s) it fixes and a short test plan. Confirm with the human before pushing/opening the PR if that hasn't already been authorized.
+Commit with a message explaining why, referencing `Fixes #<n>` so the host (GitHub/GitLab/etc.) auto-links/closes the issue on merge. Push the branch and open a PR/MR targeting `codereview` with a body listing which issue(s) it fixes and a short test plan. Confirm with the human before pushing/opening the PR if that hasn't already been authorized.
 
 Note: the `Fixes #<n>` keyword only closes the issue when the PR is *merged*, not when it's opened. Right after opening the PR, comment on the issue with the PR link so it's visibly tracked in the meantime.
 
 ## Step 6 — close out
 
-Ask whether to merge now or leave the PR for review/CI first.
+Ask whether to merge the `fix/<slug>` PR into `codereview` now or leave it for review/CI first.
 
-- Merge now: merge the PR (squash or whatever the repo convention is) — this auto-closes the linked issue(s).
-- Leave for review: don't close the issue manually; say explicitly that it'll stay open until merge.
-- Only close an issue directly (without a PR) if the fix landed via a direct commit the human asked for, or they explicitly ask you to close it out of band.
+- Merge now: merge the PR into `codereview` (squash or whatever the repo convention is).
+- **Important:** `Fixes #<n>` only auto-closes an issue when it lands on the repo's *default* branch, so merging into `codereview` alone will NOT close the issue — it just accumulates fixes there. Say this explicitly.
+- The issue actually closes once `codereview` is merged into the default branch (a separate step — only do this when asked, e.g. once several fixes have been batched up and are ready to ship).
+- Only close an issue directly (without any PR) if the fix landed via a direct commit the human asked for, or they explicitly ask you to close it out of band.
 
 ## Step 7 — report
 
