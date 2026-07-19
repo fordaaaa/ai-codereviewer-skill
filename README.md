@@ -38,9 +38,9 @@ After reporting findings, Claude asks whether to file them as GitHub issues via 
 Fixes GitHub issue(s), typically ones filed by `/cr-run`, and opens a pull request. This command does edit code.
 
 - Re-verifies each issue is still valid before touching anything (skips stale/already-fixed ones).
-- Groups related issues into one branch/PR, keeps unrelated ones separate.
+- Fixes all targeted issues on a single branch (no per-issue or per-subagent branches).
 - Runs verification (tests / exercising the code path) before committing.
-- Opens a PR with `Fixes #<n>` so GitHub auto-links it.
+- Opens one PR with a title of your choosing and a description listing every issue resolved (`Fixes #<n>` per issue) so GitHub auto-links/closes them.
 
 **Usage:**
 ```

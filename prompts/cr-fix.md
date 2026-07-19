@@ -22,17 +22,14 @@ Read the referenced file:line and surrounding context for each issue. Confirm it
 
 ## Step 2 — branch
 
-All fixes go through a shared `codereview` integration branch instead of branching straight off the default branch:
+Fix everything in this run on a single branch off the default branch — don't create a branch per issue or per subagent, and don't spin up an intermediate integration branch.
 
-- If `codereview` already exists (local or remote), check it out and bring it up to date with the default branch (fast-forward if possible; confirm before force-updating if it's diverged).
-- If it doesn't exist, create it from the current default branch: `git checkout -b codereview main` (adjust `main` if the default branch has another name).
-- Branch each PR-worthy group off `codereview`, e.g. `fix/<short-slug>`, and target the eventual PR/MR at `codereview`, not the default branch.
-
-Never commit directly to the default branch or to `codereview` itself — always work on a `fix/<short-slug>` branch on top of it.
+- Create one working branch off the latest default branch, e.g. `git checkout -b codereview-fixes main` (name doesn't matter, pick anything reasonable).
+- All issue groups from this run land as commits on that same branch. Never commit directly to the default branch.
 
 ## Step 3 — fix
 
-Make the minimal correct change per the issue's guidance. Don't scope-creep into unrelated cleanup. Add/run tests if the fix is non-trivial and tests exist or are warranted.
+Make the minimal correct change per the issue's guidance. Don't scope-creep into unrelated cleanup. Add/run tests if the fix is non-trivial and tests exist or are warranted. If multiple issues are being fixed, make one commit per issue (or per genuinely related group) on the shared branch so history stays legible, even though they all ship in one PR.
 
 ## Step 4 — verify
 
@@ -40,19 +37,17 @@ Actually exercise the change (run tests, run the affected code path) rather than
 
 ## Step 5 — commit and PR
 
-Commit with a message explaining why, referencing `Fixes #<n>` so the host (GitHub/GitLab/etc.) auto-links/closes the issue on merge. Push the branch and open a PR/MR targeting `codereview` with a body listing which issue(s) it fixes and a short test plan. Confirm with the human before pushing/opening the PR if that hasn't already been authorized.
+Commit each fix with a message explaining why, referencing `Fixes #<n>` so the host (GitHub/GitLab/etc.) auto-links/closes the issue on merge. Once all targeted issues are fixed on the branch, push it and open a single PR/MR targeting the default branch. The PR title can be anything reasonable; the body must list every issue resolved (`Fixes #<n>` for each) and a short test plan covering all of them. Confirm with the human before pushing/opening the PR if that hasn't already been authorized.
 
-Note: the `Fixes #<n>` keyword only closes the issue when the PR is *merged*, not when it's opened. Right after opening the PR, comment on the issue with the PR link so it's visibly tracked in the meantime.
+Note: the `Fixes #<n>` keyword only closes the issue when the PR is *merged*, not when it's opened. Right after opening the PR, comment on each issue with the PR link so each is visibly tracked in the meantime.
 
 ## Step 6 — close out
 
-Ask whether to merge the `fix/<slug>` PR into `codereview` now or leave it for review/CI first.
+Ask whether to merge the PR into the default branch now or leave it for review/CI first.
 
-- Merge now: merge the PR into `codereview` (squash or whatever the repo convention is).
-- **Important:** `Fixes #<n>` only auto-closes an issue when it lands on the repo's *default* branch, so merging into `codereview` alone will NOT close the issue — it just accumulates fixes there. Say this explicitly.
-- The issue actually closes once `codereview` is merged into the default branch (a separate step — only do this when asked, e.g. once several fixes have been batched up and are ready to ship).
+- Merge now: merge the PR (squash or whatever the repo convention is). This closes every issue referenced by `Fixes #<n>` in the PR body, since it lands directly on the default branch.
 - Only close an issue directly (without any PR) if the fix landed via a direct commit the human asked for, or they explicitly ask you to close it out of band.
 
 ## Step 7 — report
 
-Report the PR link(s), the resulting issue state (open vs. merged-and-closed), and note any issues skipped (stale, already fixed, needs discussion).
+Report the PR link, the resulting issue state (open vs. merged-and-closed) for each issue in the batch, and note any issues skipped (stale, already fixed, needs discussion).

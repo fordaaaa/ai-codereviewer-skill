@@ -21,17 +21,14 @@ For each issue (or group), read the referenced file:line and surrounding context
 
 ## Step 2 — branch
 
-All fixes go through a shared `codereview` integration branch rather than branching straight off `main`:
+Fix everything in this run on a single branch off `main` — don't create a branch per issue or per subagent, and don't spin up an intermediate integration branch.
 
-- If a local or remote `codereview` branch already exists, check it out and pull/rebase it onto the latest `main` (fast-forward if possible; ask the user before force-updating if it's diverged).
-- If it doesn't exist yet, create it from the latest `main`: `git checkout -b codereview main` (push with `-u` once you have a commit to put on it).
-- Then branch each PR-worthy group off `codereview`, e.g. `fix/<short-slug>`, so its eventual PR targets `codereview` (not `main`).
-
-Never commit directly to `main` or to `codereview` itself — always work on a `fix/<short-slug>` branch on top of it.
+- Create one working branch off the latest `main`, e.g. `git checkout -b codereview-fixes main` (name doesn't matter, pick anything reasonable).
+- All issue groups from this run land as commits on that same branch. Never commit directly to `main`.
 
 ## Step 3 — fix
 
-Make the minimal correct change per the guidance already in the issue body. Don't scope-creep into unrelated cleanup. If tests exist, run them; if not, and the fix is non-trivial, consider whether a test is warranted (ask the user if unsure).
+Make the minimal correct change per the guidance already in the issue body. Don't scope-creep into unrelated cleanup. If tests exist, run them; if not, and the fix is non-trivial, consider whether a test is warranted (ask the user if unsure). If multiple issues are being fixed, make one commit per issue (or per genuinely related group) on the shared branch so history stays legible, even though they all ship in one PR.
 
 ## Step 4 — verify
 
@@ -39,19 +36,17 @@ Actually exercise the change if there's a way to (run tests, run the affected co
 
 ## Step 5 — commit and PR
 
-Commit with a message describing why (referencing `Fixes #<n>` so GitHub auto-links/closes the issue on merge). Push the branch and open a PR with `gh pr create --base codereview`, body listing which issue(s) it fixes and a short test plan. Confirm with the user before pushing/opening the PR if they haven't already authorized this flow.
+Commit each fix with a message describing why (referencing `Fixes #<n>` so GitHub auto-links/closes the issue on merge). Once all targeted issues are fixed on the branch, push it and open a single PR with `gh pr create --base main`. The PR title can be anything reasonable (e.g. summarizing the theme, or just "Code review fixes"); the PR body must list every issue resolved (`Fixes #<n>` for each) and a short test plan covering all of them. Confirm with the user before pushing/opening the PR if they haven't already authorized this flow.
 
-Note: `Fixes #<n>` only auto-closes the issue when the PR is *merged* — opening the PR alone does not close it. Comment on each issue with the PR link right after opening it (`gh issue comment <n> --body "PR: <url>"`) so it's clearly tracked as in-progress rather than looking abandoned.
+Note: `Fixes #<n>` only auto-closes an issue when the PR is *merged* — opening the PR alone does not close it. Comment on each issue with the PR link right after opening it (`gh issue comment <n> --body "PR: <url>"`) so each is visibly tracked as in-progress.
 
 ## Step 6 — close out
 
-Ask the user whether to merge the `fix/<slug>` PR into `codereview` now or leave it for review/CI first.
+Ask the user whether to merge the PR into `main` now or leave it for review/CI first.
 
-- If they say merge now: run `gh pr merge --squash` (or whatever the repo's convention is) into `codereview`.
-- **Important:** `Fixes #<n>` only auto-closes an issue when it lands on the repo's *default* branch (normally `main`), so merging into `codereview` alone will NOT close the issue yet — it just accumulates fixes there. Tell the user this explicitly.
-- The issue actually closes once `codereview` itself is merged into `main` (a separate PR/step, do this only when the user asks — e.g. after they've batched up several fixes and are ready to ship them).
+- If they say merge now: run `gh pr merge --squash` (or whatever the repo's convention is). This closes every issue referenced by `Fixes #<n>` in the PR body, since it lands directly on `main`.
 - Never close an issue manually with `gh issue close` unless the fix landed without a PR (e.g. direct commit the user asked for) or the user explicitly asks you to close it out of band.
 
 ## Step 7 — report
 
-Give the user the PR link(s), current issue state (open/merged-and-closed), and note any issues you skipped (stale, already fixed, needs discussion).
+Give the user the PR link, current issue state (open/merged-and-closed) for each issue in the batch, and note any issues you skipped (stale, already fixed, needs discussion).
