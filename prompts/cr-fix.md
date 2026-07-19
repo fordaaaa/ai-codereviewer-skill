@@ -36,6 +36,16 @@ Actually exercise the change (run tests, run the affected code path) rather than
 
 Commit with a message explaining why, referencing `Fixes #<n>` so the host (GitHub/GitLab/etc.) auto-links/closes the issue on merge. Push the branch and open a PR/MR with a body listing which issue(s) it fixes and a short test plan. Confirm with the human before pushing/opening the PR if that hasn't already been authorized.
 
-## Step 6 — report
+Note: the `Fixes #<n>` keyword only closes the issue when the PR is *merged*, not when it's opened. Right after opening the PR, comment on the issue with the PR link so it's visibly tracked in the meantime.
 
-Report the PR link(s) and note any issues skipped (stale, already fixed, needs discussion).
+## Step 6 — close out
+
+Ask whether to merge now or leave the PR for review/CI first.
+
+- Merge now: merge the PR (squash or whatever the repo convention is) — this auto-closes the linked issue(s).
+- Leave for review: don't close the issue manually; say explicitly that it'll stay open until merge.
+- Only close an issue directly (without a PR) if the fix landed via a direct commit the human asked for, or they explicitly ask you to close it out of band.
+
+## Step 7 — report
+
+Report the PR link(s), the resulting issue state (open vs. merged-and-closed), and note any issues skipped (stale, already fixed, needs discussion).
