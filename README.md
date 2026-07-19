@@ -2,8 +2,8 @@
 
 Slash commands for running parallel, severity-ranked code reviews and turning the results into fixed, PR'd code.
 
-- **Claude Code users:** use `.claude/commands/` — `/cr-run` and `/cr-fix` work out of the box with auto-discovery.
-- **Any other tool** (Cursor, Aider, Codex, ChatGPT, etc.): use the plain-text prompts in [`prompts/`](prompts/) — copy-paste `prompts/cr-run.md` or `prompts/cr-fix.md`, filling in the `{{LEVEL}}` / `{{ISSUES}}` placeholder, into your tool of choice. Same logic, no Claude Code-specific syntax.
+- **Claude Code users:** use `.claude/commands/` — `/cr-run`, `/cr-sec`, and `/cr-fix` work out of the box with auto-discovery.
+- **Any other tool** (Cursor, Aider, Codex, ChatGPT, etc.): use the plain-text prompts in [`prompts/`](prompts/) — copy-paste `prompts/cr-run.md`, `prompts/cr-sec.md`, or `prompts/cr-fix.md`, filling in the `{{LEVEL}}` / `{{ISSUES}}` placeholder, into your tool of choice. Same logic, no Claude Code-specific syntax.
 
 ## Commands
 
@@ -31,6 +31,24 @@ After reporting findings, Claude asks whether to file them as GitHub issues via 
 ```
 /cr-run
 /cr-run high
+```
+
+### `/cr-sec [low|medium|high]`
+
+Runs a read-only **security** review using parallel subagents — the security-only counterpart to `/cr-run`. Never edits files.
+
+- `low` — 1 subagent, quick pass for high-confidence, high-impact vulnerabilities.
+- `medium` (default) — 3 subagents, split by category group: input validation & injection, auth/crypto/secrets, code execution & data exposure.
+- `high` — 5+ subagents, split by category and by codebase area.
+
+Covers SQL/command/template/NoSQL injection, path traversal, auth bypass, privilege escalation, JWT/session flaws, hardcoded secrets, weak crypto, insecure deserialization, RCE, XSS, and sensitive data exposure — with a curated exclusion list (DoS, outdated deps, theoretical race conditions, etc.) and an 8/10+ confidence bar to keep noise down. Same GitHub-issue-filing flow as `/cr-run`, tagged `[security]`.
+
+The vulnerability taxonomy, severity/confidence scoring, and exclusion list are adapted from Anthropic's open-source [`claude-code-security-review`](https://github.com/anthropics/claude-code-security-review) GitHub Action (MIT licensed) — full credit to that project for the underlying security review methodology.
+
+**Usage:**
+```
+/cr-sec
+/cr-sec high
 ```
 
 ### `/cr-fix <issue-number(s)|all>`
