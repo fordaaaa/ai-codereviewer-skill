@@ -86,5 +86,45 @@ Fixes GitHub issue(s), typically ones filed by `/cr-run`, and opens a pull reque
 
 ## Requirements
 
-- [GitHub CLI](https://cli.github.com/) (`gh`) authenticated for the target repo, for issue/PR creation.
+- [GitHub CLI](https://cli.github.com/) (`gh`) authenticated for the target repo, for issue/PR creation. Not needed if you're using Linear via MCP instead (see below).
 - Run from within the repo you want reviewed.
+
+## MCP integrations
+
+**What MCP actually is, in one sentence:** it's a plug that lets Claude Code call a tool directly (create a Linear ticket, read a Postgres schema, post to Slack) instead of you having to install and script a separate CLI for each one — you configure the plug once in `.mcp.json`, and Claude either finds a matching tool at runtime or quietly skips it.
+
+None of this is required to use `/cr-run`, `/cr-sec`, `/cr-recheck`, `/cr-fix` — they all work today with just `gh` (GitHub CLI). Everything below is optional extra plumbing that's already wired into the commands and ready to switch on: a starter config lives at [`.mcp.json`](.mcp.json), and Claude Code reads it automatically when you run commands from this repo.
+
+**How the fallback works:** each command's "Tracker selection" step checks (via `ToolSearch`) whether a given MCP server's tools are actually available before using them. Unconfigured or unauthenticated server → the command just uses GitHub/`gh` like it always did. Nothing breaks if you ignore this whole section.
+
+| Server | What it's for | What it adds here | Used by |
+|---|---|---|---|
+| **Linear** | Issue tracker (Jira/Asana-style alternative to GitHub Issues) | File/list/comment/close issues in Linear instead of GitHub | all four commands |
+| **GitHub** | Same thing `gh` CLI does, via MCP instead of shelling out | Issue/PR operations if you don't have `gh` installed or prefer MCP | all four commands (fallback under Linear) |
+| **Slack** | Team chat | Posts a short summary of HIGH-severity security findings to a channel you pick | `/cr-sec` only, optional |
+| **Sentry** | Production error monitoring | Cross-references findings against real crashes/errors so severity reflects what's actually happening in prod, not just what looks risky on paper | `/cr-sec` only, optional |
+| **Postgres** | Your app's database | Lets `/cr-sec` check real schema/column types for SQL-injection findings instead of guessing from code | `/cr-sec` only, optional |
+| **Semgrep** | Static analysis (SAST) | Grounds findings in actual rule matches instead of pure LLM pattern-matching — subagents treat hits as leads and verify each one before reporting | `/cr-run` and `/cr-sec`, optional |
+| **gitleaks** (CLI, not MCP) | Secrets scanner | If the `gitleaks` binary is on `PATH`, `/cr-sec` shells out to it to catch hardcoded secrets before the auth/crypto/secrets subagent reads the code | `/cr-sec` only, optional |
+
+Everything is pre-wired into every command already — you don't need to touch the prompt files, just authenticate/configure the servers you want:
+
+### Setup
+
+1. **Linear, Sentry** — hosted, OAuth, easiest: nothing to configure beyond `.mcp.json` already being there. The first time a command tries to use one, Claude Code opens a browser auth flow. Approve it once; it's remembered after that.
+2. **GitHub, Slack, Postgres** — local servers, need credentials as environment variables before you launch Claude Code:
+   ```
+   export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_...      # github (repo scope)
+   export SLACK_BOT_TOKEN=xoxb-...                  # slack (chat:write, channels:read scopes)
+   export SLACK_TEAM_ID=T0123456
+   export DATABASE_URL=postgres://user:pass@host/db # postgres, read-only creds recommended
+   ```
+   `.mcp.json` reads these from your environment automatically — nothing else to edit. Only export the ones you actually want; the rest just won't start (and commands fall back to `gh`/skip the optional step).
+3. **Semgrep** — local server, no credentials needed: requires `uv`/`uvx` installed (`pip install uv` or see [astral.sh/uv](https://astral.sh/uv)); `.mcp.json` already runs `uvx semgrep-mcp` on demand, so nothing else to configure.
+4. **gitleaks** — not an MCP server, just a CLI: install it ([github.com/gitleaks/gitleaks](https://github.com/gitleaks/gitleaks)) and make sure it's on `PATH`. `/cr-sec` detects it with a plain `which gitleaks` check and shells out directly — no `.mcp.json` entry involved.
+5. Restart/reload Claude Code in this repo after changing `.mcp.json` or env vars so it re-reads the server list.
+
+### Also worth adding later
+
+- **Scheduled runs** — wire `/cr-run`/`/cr-sec` into the `schedule` skill for nightly sweeps, with `/cr-recheck` running first each time to keep the tracker clean.
+- **CVE/advisory lookup** is already live in `/cr-sec` via plain `WebSearch` (no MCP server needed).

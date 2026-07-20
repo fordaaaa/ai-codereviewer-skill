@@ -6,6 +6,8 @@ This is the security-focused counterpart to `cr-run.md` — use that one for gen
 
 The vulnerability taxonomy, exclusion list, and confidence scoring below are adapted from Anthropic's open-source [`claude-code-security-review`](https://github.com/anthropics/claude-code-security-review) action (MIT licensed) — see the repo README for attribution.
 
+If your tool has an MCP server connected for an issue tracker (Linear), CVE/advisory lookup, or Slack, use those instead of `gh issue`/manual search wherever this prompt mentions them. See the Claude Code version's [MCP integrations](../README.md#mcp-integrations) for the pattern this is based on.
+
 ---
 
 Run a security review of this repository using parallel read-only subagents (or, if your tool has no subagent/multi-session concept, simulate it with sequential passes, one category group per pass), then report vulnerability findings ranked by severity.
@@ -19,6 +21,10 @@ Level: `{{LEVEL}}` (default `medium` if you don't set one).
 - **high** — 5+ passes, same category split AND by area of the codebase if it's large.
 
 Scope: if there's a substantial uncommitted diff, or a PR/branch is specified, review that diff (the common case). Otherwise review the full source tree — ask if genuinely ambiguous.
+
+## Step 0.5 — static analysis grounding (optional)
+
+If your tool can run shell commands and `semgrep` and/or `gitleaks` are installed, run them over the review scope before your own read: `semgrep --config auto <path>` for static analysis, `gitleaks detect`/`gitleaks protect` for secrets. Treat their output as leads, not findings — verify each hit against the actual code yourself before reporting it, since both tools produce false positives. If neither is installed, skip this step and note in the final report that the review is LLM-only.
 
 ## Step 1 — review
 
@@ -55,7 +61,7 @@ Scope: if there's a substantial uncommitted diff, or a PR/branch is specified, r
 
 ## Step 2 — aggregate, dedupe, filter
 
-Merge findings, sorted by severity descending. Deduplicate anything flagged more than once. Re-check each remaining finding against the hard-exclusions list and drop matches — err toward dropping rather than flooding the report with noise. Drop anything you can't verify by rereading the cited code.
+Merge findings, sorted by severity descending. Deduplicate anything flagged more than once. Re-check each remaining finding against the hard-exclusions list and drop matches — err toward dropping rather than flooding the report with noise. Drop anything you can't verify by rereading the cited code. Mark any finding also caught by Semgrep/gitleaks (Step 0.5) as tool-confirmed in the report.
 
 ## Step 3 — report
 

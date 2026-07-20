@@ -6,6 +6,8 @@ Portable version of Claude Code's `/cr-fix` command. Paste this into any coding 
 
 Fix the following GitHub issue(s), typically ones filed by a `cr-run` review, and open a pull request. This prompt DOES involve editing code.
 
+If your tool has an MCP server connected for an issue tracker other than GitHub (e.g. Linear), use that instead of `gh issue` — note that `Fixes #<n>`-style auto-linking is GitHub-specific, so for other trackers, reference the issue ID in the PR body and update its status manually once merged. See the Claude Code version's [MCP integrations](../README.md#mcp-integrations) for the pattern this is based on.
+
 ## Step 0 — resolve target issues
 
 Target: `{{ISSUES}}`.

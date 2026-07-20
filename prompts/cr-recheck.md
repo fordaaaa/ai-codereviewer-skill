@@ -4,6 +4,8 @@ Portable version of Claude Code's `/cr-recheck` command. Paste this into any cod
 
 Run this before `cr-fix.md` on a batch of old issues, so you don't spend fix effort re-investigating something that already got fixed, refactored away, or deleted while other work continued in the meantime. Read-only with respect to code — only reads source, never edits it; only updates/closes issues.
 
+If your tool has an MCP server connected for an issue tracker other than GitHub (e.g. Linear), use that instead of `gh issue`. See the Claude Code version's [MCP integrations](../README.md#mcp-integrations) for the pattern this is based on.
+
 ---
 
 ## Step 0 — resolve target issues

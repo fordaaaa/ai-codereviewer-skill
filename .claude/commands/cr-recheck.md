@@ -7,10 +7,10 @@ Re-check previously filed issues against the *current* state of the code, so `/c
 
 ## Step 0 — resolve target issues
 
-Argument: `$ARGUMENTS` (default `all` open issues filed by `/cr-run`/`/cr-sec` if empty).
+Pick a tracker per [Tracker selection](#tracker-selection) below. Argument: `$ARGUMENTS` (default `all` open items filed by `/cr-run`/`/cr-sec` if empty).
 
-- If one or more issue numbers, fetch each with `gh issue view <n>`.
-- If `all`, run `gh issue list --state open --limit 100` and use every open issue that looks like a review finding (has a `file:line` reference in the title/body, or a severity/category label).
+- If one or more issue numbers/IDs, fetch each (`gh issue view <n>`, or the tracker's equivalent).
+- If `all`, list open items and use every one that looks like a review finding (has a `file:line` reference in the title/body, or a severity/category label).
 - If there are none, say so and stop — nothing to recheck.
 
 ## Step 1 — refresh each issue's location
@@ -29,9 +29,18 @@ Do this for all target issues in parallel using the `Agent` tool (`subagent_type
 ## Step 2 — act on the results
 
 - **confirmed**: leave the issue open. If the line number moved, comment with the corrected `file:line` so `/cr-fix` doesn't have to re-search, and update the issue title/body if it references the old line.
-- **stale**: comment explaining specifically why it no longer applies (e.g. "Lines 40-52 were refactored in a later commit and no longer construct the query via string concatenation — already using parameterized queries.") and close with `gh issue close <n> --comment "..."`. Never delete the issue, just close it — it's useful history.
+- **stale**: comment explaining specifically why it no longer applies (e.g. "Lines 40-52 were refactored in a later commit and no longer construct the query via string concatenation — already using parameterized queries.") and close it. Never delete the issue, just close it — it's useful history.
 - **needs-human**: comment noting what's ambiguous and leave it open with a `needs-review` label if one exists (don't create new labels without asking).
 
 ## Step 3 — report
 
 Give the user a summary table: issue number, verdict (confirmed/stale/needs-human), one-line reason. Call out the count closed as stale so they can see the token/time saved before running `/cr-fix` on the rest.
+
+## Tracker selection
+
+Before doing anything, check `ToolSearch` (query `"mcp__linear"`) for a configured Linear MCP server:
+
+- **If Linear MCP tools are available**, use them (`list_issues`, `get_issue`, `create_comment`, `update_issue`) instead of `gh issue`.
+- **Otherwise**, use the `github` MCP server's tools if configured, or plain `gh issue` (GitHub CLI) if not — either way, GitHub issues as before.
+
+See the root [README](../../README.md#mcp-integrations) for how to configure the Linear MCP server.

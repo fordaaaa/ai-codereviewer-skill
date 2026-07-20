@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "linear": {
+      "type": "sse",
+      "url": "https://mcp.linear.app/sse"
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+      }
+    },
+    "sentry": {
+      "type": "sse",
+      "url": "https://mcp.sentry.dev/mcp"
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
+    },
+    "semgrep": {
+      "command": "uvx",
+      "args": ["semgrep-mcp"]
+    }
+  }
+}

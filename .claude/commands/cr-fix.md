@@ -7,10 +7,10 @@ Fix GitHub issue(s) previously filed (typically by `/cr-run`) and open a pull re
 
 ## Step 0 — resolve target issues
 
-Argument: `$ARGUMENTS`.
+Pick a tracker per [Tracker selection](#tracker-selection) below. Argument: `$ARGUMENTS`.
 
-- If it's one or more issue numbers, fetch each with `gh issue view <n>`.
-- If it's `all`, run `gh issue list --state open --limit 100` and ask the user to confirm the subset to fix before touching anything (don't silently fix everything — batch-fixing unrelated issues in one PR is usually wrong).
+- If it's one or more issue numbers/IDs, fetch each (`gh issue view <n>`, or the tracker's equivalent).
+- If it's `all`, list open items and ask the user to confirm the subset to fix before touching anything (don't silently fix everything — batch-fixing unrelated issues in one PR is usually wrong).
 - If empty, ask the user which issue(s) to fix.
 
 Group issues that are genuinely related (same file/root cause) into one PR; keep unrelated issues on separate branches/PRs unless the user says otherwise.
@@ -50,3 +50,12 @@ Ask the user whether to merge the PR into `main` now or leave it for review/CI f
 ## Step 7 — report
 
 Give the user the PR link, current issue state (open/merged-and-closed) for each issue in the batch, and note any issues you skipped (stale, already fixed, needs discussion).
+
+## Tracker selection
+
+Before touching any issue, check `ToolSearch` (query `"mcp__linear"`) for a configured Linear MCP server:
+
+- **If Linear MCP tools are available**, use them (`get_issue`, `list_issues`, `update_issue`, `create_comment`) for issue lookups/comments instead of `gh issue`. `Fixes #<n>`-style auto-linking is GitHub-specific — for Linear, include the Linear issue ID in the PR body and update the Linear issue's status manually via MCP once merged (Linear's own GitHub integration will otherwise double-handle it if both are active — check with the user which should own status changes).
+- **Otherwise**, use the `github` MCP server's tools if configured, or plain `gh issue`/`gh pr` (GitHub CLI) if not — either way, GitHub as before.
+
+See the root [README](../../README.md#mcp-integrations) for how to configure the Linear MCP server.

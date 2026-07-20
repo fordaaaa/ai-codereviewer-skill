@@ -6,6 +6,8 @@ Portable version of Claude Code's `/cr-run` command. Paste this into any coding 
 
 Run a code review of this repository using parallel read-only subagents (or, if your tool has no subagent/multi-session concept, simulate it by doing sequential passes with a different focus each time), then report findings ranked by severity. Do not edit any files — this is a review-only pass.
 
+If your tool has an MCP server connected for an issue tracker other than GitHub (e.g. Linear), use that instead of `gh issue` wherever this prompt says to file/list issues. See the Claude Code version's [MCP integrations](../README.md#mcp-integrations) for the pattern this is based on.
+
 ## Step 0 — parse complexity level
 
 Level: `{{LEVEL}}` (default `medium` if you don't set one). This controls how many passes/subagents you use and how deep each goes:
@@ -15,6 +17,10 @@ Level: `{{LEVEL}}` (default `medium` if you don't set one). This controls how ma
 - **high** — 5+ passes/subagents, split by both lens (correctness, performance, security, style/design, test coverage) AND by area of the codebase if it's large (e.g. one pass per top-level module/directory) so no single pass has to cover everything.
 
 Scope: if there's a substantial uncommitted diff, or a PR/branch is specified, review that diff. Otherwise review the full source tree — ask if genuinely ambiguous.
+
+## Step 0.5 — static analysis grounding (optional)
+
+If your tool can run shell commands and `semgrep` is installed, run `semgrep --config auto <path>` over the review scope before your own read. Treat its output as leads, not findings — verify each hit against the actual code yourself, since it produces false positives. If not installed, skip this step.
 
 ## Step 1 — review
 
@@ -28,9 +34,11 @@ For each lens/area, read the relevant files and identify only real, verified pro
 | 🟢 | Low (2) | minor inefficiency, dead code, unclear error handling |
 | ⚪ | Trivial (1) | style/naming/cleanup, no functional impact |
 
+Also assign a confidence score 1-10; only report findings scoring 8+ (>80% confident it's real and reproducible) — drop the rest. Apply these hard exclusions (skip unless doing a deep/high-effort pass, where they may be noted briefly as low-priority): style/naming nitpicks with no functional impact unless explicitly requested; purely theoretical issues with no concrete triggering input/state; findings in test-only files unless the bug is in the test's own logic.
+
 ## Step 2 — aggregate and dedupe
 
-Merge all findings into one list, sorted by severity descending (🔴 → ⚪). Deduplicate anything flagged more than once. Drop anything you can't verify by rereading the cited file:line.
+Merge all findings into one list, sorted by severity descending (🔴 → ⚪). Deduplicate anything flagged more than once. Drop anything you can't verify by rereading the cited file:line. Mark any finding also caught by Semgrep (Step 0.5) as tool-confirmed.
 
 ## Step 3 — report
 

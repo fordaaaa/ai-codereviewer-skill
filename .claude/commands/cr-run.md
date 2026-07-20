@@ -15,6 +15,10 @@ Argument: `$ARGUMENTS` (default `medium` if empty). This controls how many subag
 
 Scope: if the repo has a substantial uncommitted diff or the user references a PR/branch, review that diff. Otherwise review the full source tree (use judgment — ask the user if genuinely ambiguous, e.g. "review everything or just recent changes?").
 
+## Step 0.5 — static analysis grounding (optional)
+
+Before spawning subagents, check `ToolSearch` (query `"mcp__semgrep"`) for a configured Semgrep MCP server. If available, run it once over the review scope using its correctness/best-practice rulesets (not just security) and pass raw hits into the relevant subagent's prompt in Step 1 as supporting evidence — a subagent must independently verify any tool hit against the actual code before reporting it as a finding, since Semgrep has its own false positives. If unavailable, skip this step and proceed exactly as before.
+
 ## Step 1 — spawn subagents
 
 Use the `Agent` tool with `subagent_type: Explore` or `general-purpose` (read-only findings, no edits) for each lens/area determined above, in parallel (single message, multiple tool calls). Each subagent prompt must:
@@ -27,11 +31,13 @@ Use the `Agent` tool with `subagent_type: Explore` or `general-purpose` (read-on
   - 🟡 Medium (3) — logic error, meaningful perf issue, or maintainability hazard in an edge case
   - 🟢 Low (2) — minor inefficiency, dead code, unclear error handling
   - ⚪ Trivial (1) — style/naming/cleanup, no functional impact
+- Assign each finding a confidence score 1-10; only report findings scoring 8+ (>80% confident it's a real, reproducible issue) — drop the rest rather than including them as caveats.
+- Apply these hard exclusions (skip unless `high` tier, where they may be noted briefly as low-priority): style/naming nitpicks with no functional impact unless explicitly requested; purely theoretical issues with no concrete triggering input/state; findings in test-only files unless the bug is in the test's own logic (e.g. an assertion that can't fail).
 - Cap response length (e.g. "under 300 words, bullet list") to keep aggregation cheap.
 
 ## Step 2 — aggregate and dedupe
 
-Once subagents report back, merge all findings into one list, sorted by severity descending (🔴 → ⚪). Deduplicate anything two subagents flagged independently. Drop anything you can't personally verify by spot-checking the cited file:line yourself.
+Once subagents report back, merge all findings into one list, sorted by severity descending (🔴 → ⚪). Deduplicate anything two subagents flagged independently. Drop anything you can't personally verify by spot-checking the cited file:line yourself. Mark any finding also flagged by Semgrep (Step 0.5) as tool-confirmed — call this out distinctly in the Step 3 report.
 
 ## Step 3 — report to the user
 
@@ -39,9 +45,18 @@ Present the findings as a table or list: severity emoji, file:line, one-line sum
 
 ## Step 4 — file issues (only after user confirms)
 
-Run `gh issue list --state all --limit 100` first and skip anything already filed (compare by file/line/description, not title wording). For each confirmed finding, run `gh issue create` with:
+Pick a tracker per [Tracker selection](#tracker-selection) below. List existing open items first and skip anything already filed (compare by file/line/description, not title wording). For each confirmed finding, create an item with:
 
 - Title: `<severity emoji> <short description> (<file>:<line>)`
-- Body: file:line, what's wrong, concrete fix suggestion, severity level (spelled out), and label via `--label` if the repo has matching severity labels (create them with `gh label create` only if the user agrees to that too).
+- Body: file:line, what's wrong, concrete fix suggestion, severity level (spelled out), and a severity label/tag if the tracker supports one (create new labels only if the user agrees).
 
-Report back the filed issue links, and list anything left unfiled (too trivial, needs more discussion, etc).
+Report back the filed item links, and list anything left unfiled (too trivial, needs more discussion, etc).
+
+## Tracker selection
+
+Before filing anything, check `ToolSearch` (query `"mcp__linear"`) for a configured Linear MCP server:
+
+- **If Linear MCP tools are available**, use them (`create_issue`, `list_issues`, `update_issue`, `create_comment`, etc.) instead of `gh issue`. Ask the user which Linear team/project to file into if it's not obvious from context.
+- **Otherwise**, use the `github` MCP server's tools if configured, or plain `gh issue` (GitHub CLI) if not — either way, GitHub issues as before.
+
+See the root [README](../../README.md#mcp-integrations) for how to configure the Linear MCP server.
