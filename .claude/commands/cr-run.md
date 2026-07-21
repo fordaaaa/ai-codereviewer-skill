@@ -21,6 +21,7 @@ Cheaply load persistent context before spawning subagents so a long run doesn't 
 
 - **Codebase map** — if `.claude/cr/codebase-map.md` exists, read it and pass the relevant sections (Modules, Entry points, Build/run) into subagent prompts so each knows the layout without re-deriving it. If missing, suggest `/cr-map` but proceed.
 - **Learned notes** — if `.claude/cr/learn.enabled` exists, read `.claude/cr/notes.md` and fold it in: honor `false-positive` notes, give `hotspot` areas extra scrutiny, respect `convention` notes so you don't flag intentional patterns. If learning is off, skip silently.
+- **Baseline** — if `.claude/cr/baseline.md` exists (see `/cr-baseline`), read it and drop matching findings at aggregation time (file + category + fuzzy description, tolerant of line drift), replacing them with a single "N baselined findings suppressed" line so the report stays focused on new issues.
 
 ## Step 0.5 — static analysis grounding (optional)
 

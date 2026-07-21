@@ -23,6 +23,7 @@ Before anything else, cheaply load persistent context so subagents don't re-expl
 
 - **Codebase map** — if `.claude/cr/codebase-map.md` exists, read it and pass its **Entry points**, **Trust boundaries**, and **Sensitive sinks** sections into each subagent's prompt as a pre-computed attack-surface map. This focuses subagents on real sinks instead of blind reading. If it's missing or looks stale (commit sha differs a lot from `HEAD`), suggest the user run `/cr-map` first, but proceed without it.
 - **Learned notes** — if `.claude/cr/learn.enabled` exists, read `.claude/cr/notes.md` and fold it in: honor `false-positive` notes (do not re-flag those classes), and tell subagents to give `hotspot` areas extra scrutiny. If learning is off, skip silently.
+- **Baseline** — if `.claude/cr/baseline.md` exists (see `/cr-baseline`), read it and, at aggregation time, drop findings that match a baselined entry (file + category + fuzzy description, tolerant of line drift). Replace them in the report with a single "N baselined findings suppressed — `/cr-baseline list` to review" line so the report stays focused on new issues.
 
 ## Step 0.5 — static analysis grounding (optional)
 
