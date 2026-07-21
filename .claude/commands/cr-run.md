@@ -15,6 +15,13 @@ Argument: `$ARGUMENTS` (default `medium` if empty). This controls how many subag
 
 Scope: if the repo has a substantial uncommitted diff or the user references a PR/branch, review that diff. Otherwise review the full source tree (use judgment — ask the user if genuinely ambiguous, e.g. "review everything or just recent changes?").
 
+## Step 0.4 — load map & learned notes (optional grounding)
+
+Cheaply load persistent context before spawning subagents so a long run doesn't re-explore from scratch:
+
+- **Codebase map** — if `.claude/cr/codebase-map.md` exists, read it and pass the relevant sections (Modules, Entry points, Build/run) into subagent prompts so each knows the layout without re-deriving it. If missing, suggest `/cr-map` but proceed.
+- **Learned notes** — if `.claude/cr/learn.enabled` exists, read `.claude/cr/notes.md` and fold it in: honor `false-positive` notes, give `hotspot` areas extra scrutiny, respect `convention` notes so you don't flag intentional patterns. If learning is off, skip silently.
+
 ## Step 0.5 — static analysis grounding (optional)
 
 Before spawning subagents, check `ToolSearch` (query `"mcp__semgrep"`) for a configured Semgrep MCP server. If available, run it once over the review scope using its correctness/best-practice rulesets (not just security) and pass raw hits into the relevant subagent's prompt in Step 1 as supporting evidence — a subagent must independently verify any tool hit against the actual code before reporting it as a finding, since Semgrep has its own false positives. If unavailable, skip this step and proceed exactly as before.
@@ -51,6 +58,10 @@ Pick a tracker per [Tracker selection](#tracker-selection) below. List existing 
 - Body: file:line, what's wrong, concrete fix suggestion, severity level (spelled out), and a severity label/tag if the tracker supports one (create new labels only if the user agrees).
 
 Report back the filed item links, and list anything left unfiled (too trivial, needs more discussion, etc).
+
+## Step 5 — record lessons (only if learning is enabled)
+
+If `.claude/cr/learn.enabled` exists (see `/cr-learn`), append any genuinely new, durable lessons to `.claude/cr/notes.md`, deduping against existing notes — e.g. a `hotspot` note for an area with a confirmed bug, a `convention` note for an intentional pattern you initially misread, or a `false-positive` note for something you confirmed is fine. Terse and durable only; skip if learning is off.
 
 ## Tracker selection
 

@@ -17,12 +17,20 @@ Argument: `$ARGUMENTS` (default `medium` if empty).
 
 Scope: if there's a substantial uncommitted diff, or a PR/branch is specified, review only that diff (this is the common case — security review is usually run per-PR). Otherwise review the full source tree — ask if genuinely ambiguous.
 
+## Step 0.4 — load map & learned notes (optional grounding)
+
+Before anything else, cheaply load persistent context so subagents don't re-explore from scratch:
+
+- **Codebase map** — if `.claude/cr/codebase-map.md` exists, read it and pass its **Entry points**, **Trust boundaries**, and **Sensitive sinks** sections into each subagent's prompt as a pre-computed attack-surface map. This focuses subagents on real sinks instead of blind reading. If it's missing or looks stale (commit sha differs a lot from `HEAD`), suggest the user run `/cr-map` first, but proceed without it.
+- **Learned notes** — if `.claude/cr/learn.enabled` exists, read `.claude/cr/notes.md` and fold it in: honor `false-positive` notes (do not re-flag those classes), and tell subagents to give `hotspot` areas extra scrutiny. If learning is off, skip silently.
+
 ## Step 0.5 — static analysis grounding (optional)
 
 Before spawning subagents, check `ToolSearch` (query `"mcp__semgrep"`) for a configured Semgrep MCP server:
 
 - **If available**, run it once over the review scope (the diff's files, or the full tree) using its default/security rulesets. Collect the raw findings (rule id, file:line, message).
-- **If a `gitleaks` binary is available** (check with a quick `which gitleaks`/`gitleaks version`), run `gitleaks detect` (or `gitleaks protect` for a diff) over the same scope for hardcoded secrets.
+- **If a `gitleaks` binary is available** (check with a quick `which gitleaks`/`gitleaks version`), run `gitleaks detect` (or `gitleaks protect` for a diff) over the same scope for hardcoded secrets. Run `gitleaks detect --log-opts="--all"` at least once to catch secrets committed and later "removed" — a secret is only really gone if it was rotated, not just deleted from the working tree.
+- **Dependency / SBOM audit** — if a lockfile-native auditor is available for the stack, run it over the review scope and treat confirmed advisories as leads for the auth/crypto/secrets subagent: `npm audit --production` (npm/pnpm/yarn), `pip-audit` or `uv pip audit` (Python), `govulncheck ./...` (Go), `cargo audit` (Rust), `osv-scanner -r .` (any, if installed). Only surface advisories that are actually reachable from the app's own code — an advisory in an unused transitive dep is noise; note it at most as LOW.
 - Pass any raw hits into the relevant subagent's prompt in Step 1 as supporting evidence, tagged by category (Semgrep secrets/crypto hits and gitleaks hits go to the auth/crypto/secrets subagent; other Semgrep rule categories go to the matching subagent). Subagents must independently verify each tool hit against the actual code — a Semgrep/gitleaks match is a lead, not an automatic finding, since both tools have their own false positives.
 - **If neither tool is available**, skip this step and proceed exactly as before — note in the final report that findings are LLM-only review (no static-analysis grounding) so the user knows the confidence bar reflects that.
 
@@ -35,6 +43,9 @@ Use the `Agent` tool with `subagent_type: Explore` or `general-purpose` (read-on
 **Categories to examine** (assign the relevant subset per subagent):
 - Input validation: SQL injection, command injection, XXE, template injection, NoSQL injection, path traversal
 - Auth & authz: authentication bypass, privilege escalation, session management flaws, JWT vulnerabilities, authorization bypasses
+- Access control (object-level): IDOR / BOLA — an authenticated user reaching another user's/tenant's records because the handler filters by the supplied id but not by the caller's ownership. Check every route that takes a resource id.
+- Mass assignment / over-posting: request bodies bound straight to models/ORM objects where a client can set fields it shouldn't (`is_admin`, `role`, `price`, `user_id`).
+- SSRF: outbound requests whose **host or protocol** is attacker-influenced (not just the path) — webhook URLs, image/PDF fetchers, URL preview, proxy endpoints.
 - Crypto & secrets: hardcoded API keys/passwords/tokens, weak crypto algorithms, improper key storage, weak randomness, certificate validation bypasses
 - Injection & code execution: insecure deserialization (pickle, YAML), eval injection, RCE, XSS (reflected/stored/DOM)
 - Data exposure: sensitive data logging, PII handling violations, API data leakage, debug info exposure
@@ -89,6 +100,15 @@ Pick a tracker per [Tracker selection](#tracker-selection) below. List existing 
 - Body: file:line, description, exploit scenario, fix recommendation, severity, and a `security` label/tag (plus severity label if the tracker has matching labels — create with `gh label create` or the tracker's equivalent only if the user agrees).
 
 Report back the filed item links, and list anything left unfiled (too speculative, needs more discussion, etc). Findings filed this way are compatible with `/cr-fix` for remediation.
+
+## Step 5 — record lessons (only if learning is enabled)
+
+If `.claude/cr/learn.enabled` exists (see `/cr-learn`), append any genuinely new, durable lessons from this run to `.claude/cr/notes.md`, deduping against what's already there. Good candidates:
+- a `false-positive` note for any finding you investigated and confirmed safe, so the next run doesn't re-flag it;
+- a `hotspot` note if an area produced a confirmed HIGH/MEDIUM finding;
+- a `convention` note for a project-specific safe pattern you had to learn (e.g. "all queries go through the `db.q()` wrapper which parameterizes").
+
+Keep it terse and durable — skip anything already obvious from the code or the codebase map. If learning is off, skip this step entirely.
 
 ## Tracker selection
 
