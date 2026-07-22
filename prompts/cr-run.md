@@ -18,6 +18,15 @@ Level: `{{LEVEL}}` (default `medium` if you don't set one). This controls how ma
 
 Scope: if there's a substantial uncommitted diff, or a PR/branch is specified, review that diff. Otherwise review the full source tree — ask if genuinely ambiguous.
 
+## Step 0.2 — choose trace mode
+
+Before doing any review work, ask the human once how they want this run handled once findings are in:
+
+- **GitHub mode (default)** — normal flow: report findings, then if confirmed in Step 3, file them as GitHub issues (or the tracker's equivalent) per Step 4, giving a visible paper trail others can see and that a `cr-fix` pass can later pick up.
+- **Local-only mode** — nothing gets filed, committed, or pushed anywhere. After the Step 3 report, if the human wants any findings fixed now, apply the fix directly to the working tree yourself (Step 4b) — no branch, no commit, no push, no issue. The change sits uncommitted for them to review, commit, or discard on their own.
+
+Carry this choice through the rest of the run — don't ask again per finding. In local-only mode, skip Step 4 (issue filing) entirely.
+
 ## Step 0.5 — static analysis grounding (optional)
 
 If your tool can run shell commands and `semgrep` is installed, run `semgrep --config auto <path>` over the review scope before your own read. Treat its output as leads, not findings — verify each hit against the actual code yourself, since it produces false positives. If not installed, skip this step.
@@ -42,11 +51,11 @@ Merge all findings into one list, sorted by severity descending (🔴 → ⚪). 
 
 ## Step 3 — report
 
-Present findings as a table: severity emoji, file:line, one-line summary, one-line fix suggestion. Then ask whether to file these as GitHub issues — do not create issues without explicit confirmation.
+Present findings as a table: severity emoji, file:line, one-line summary, one-line fix suggestion. Then, per the mode chosen in Step 0.2: in **GitHub mode**, ask whether to file these as GitHub issues — do not create issues without explicit confirmation. In **local-only mode**, instead ask whether to apply some/all of the fixes directly to the working tree now (Step 4b).
 
-## Step 4 — file issues (only after confirmation)
+## Step 4 — file issues (GitHub mode only, after confirmation)
 
-If you (or the human) have `gh` CLI access: run `gh issue list --state all --limit 100` first, skip anything already filed (compare by file/line/description, not title wording), then for each confirmed finding run `gh issue create` with:
+Skip this step entirely in local-only mode. If you (or the human) have `gh` CLI access: run `gh issue list --state all --limit 100` first, skip anything already filed (compare by file/line/description, not title wording), then for each confirmed finding run `gh issue create` with:
 
 - Title: `<severity emoji> <short description> (<file>:<line>)`
 - Body: file:line, what's wrong, concrete fix suggestion, spelled-out severity level.
@@ -54,3 +63,7 @@ If you (or the human) have `gh` CLI access: run `gh issue list --state all --lim
 If you don't have `gh` access, just output the issues as formatted markdown the human can paste in manually.
 
 Report back what was filed (or drafted) and what was left out (too trivial, needs discussion, etc).
+
+## Step 4b — local fix (local-only mode only)
+
+Skip this step entirely in GitHub mode. For each finding confirmed in Step 3, read the file, apply the minimal correct fix, and run tests if any exist for the affected code. Don't create a branch, don't commit — leave the edited files sitting uncommitted in the working tree. Report a short summary of what changed per finding instead of issue text.

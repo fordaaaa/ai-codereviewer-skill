@@ -22,7 +22,18 @@ Group genuinely related issues (same file/root cause) into one PR; keep unrelate
 
 Read the referenced file:line and surrounding context for each issue. Confirm it's still valid — code may have changed since filing. If stale or already fixed, say so and skip rather than forcing a change.
 
-## Step 2 — branch
+## Step 1.5 — choose trace mode
+
+Before touching anything, ask the human once how they want this fix delivered:
+
+- **GitHub mode (default)** — continue exactly as below: branch, commit, push, open a PR, and keep the source issues linked/commented per Steps 5-6.
+- **Local-only mode** — fix directly on the current branch, in the working tree, no traces left anywhere. Skip Step 2 (no new branch) and skip Step 5's push/PR — the fixes just sit uncommitted in the working tree for the human to review, commit, or discard themselves. Don't comment on or close the source issues in Steps 5/6 either, since there's nothing pushed to point at yet.
+
+Apply the chosen mode for the rest of this run.
+
+## Step 2 — branch (GitHub mode only)
+
+Skip this step entirely in local-only mode — stay on the current branch.
 
 Fix everything in this run on a single branch off the default branch — don't create a branch per issue or per subagent, and don't spin up an intermediate integration branch.
 
@@ -31,19 +42,23 @@ Fix everything in this run on a single branch off the default branch — don't c
 
 ## Step 3 — fix
 
-Make the minimal correct change per the issue's guidance. Don't scope-creep into unrelated cleanup. Add/run tests if the fix is non-trivial and tests exist or are warranted. If multiple issues are being fixed, make one commit per issue (or per genuinely related group) on the shared branch so history stays legible, even though they all ship in one PR.
+Make the minimal correct change per the issue's guidance. Don't scope-creep into unrelated cleanup. Add/run tests if the fix is non-trivial and tests exist or are warranted. In **GitHub mode**, if multiple issues are being fixed, make one commit per issue (or per genuinely related group) on the shared branch so history stays legible, even though they all ship in one PR. In **local-only mode**, skip committing entirely — just leave the edits in the working tree.
 
 ## Step 4 — verify
 
 Actually exercise the change (run tests, run the affected code path) rather than just eyeballing the diff.
 
-## Step 5 — commit and PR
+## Step 5 — commit and PR (GitHub mode only)
+
+Skip this step entirely in local-only mode — nothing gets committed, pushed, or opened as a PR/MR.
 
 Commit each fix with a message explaining why, referencing `Fixes #<n>` so the host (GitHub/GitLab/etc.) auto-links/closes the issue on merge. Once all targeted issues are fixed on the branch, push it and open a single PR/MR targeting the default branch. The PR title can be anything reasonable; the body must list every issue resolved (`Fixes #<n>` for each) and a short test plan covering all of them. Confirm with the human before pushing/opening the PR if that hasn't already been authorized.
 
 Note: the `Fixes #<n>` keyword only closes the issue when the PR is *merged*, not when it's opened. Right after opening the PR, comment on each issue with the PR link so each is visibly tracked in the meantime.
 
-## Step 6 — close out
+## Step 6 — close out (GitHub mode only)
+
+Skip this step entirely in local-only mode.
 
 Ask whether to merge the PR into the default branch now or leave it for review/CI first.
 
@@ -52,4 +67,4 @@ Ask whether to merge the PR into the default branch now or leave it for review/C
 
 ## Step 7 — report
 
-Report the PR link, the resulting issue state (open vs. merged-and-closed) for each issue in the batch, and note any issues skipped (stale, already fixed, needs discussion).
+In **GitHub mode**, report the PR link, the resulting issue state (open vs. merged-and-closed) for each issue in the batch, and note any issues skipped (stale, already fixed, needs discussion). In **local-only mode**, skip the PR/issue-state details — summarize what changed, in which files, and note that nothing was committed, pushed, or filed; the source issues are still open and untouched, and the fix is sitting in the working tree.

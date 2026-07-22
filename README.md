@@ -25,7 +25,10 @@ Findings are ranked and tagged with a severity scale:
 | 🟢 | Low | minor inefficiency, dead code, unclear error handling |
 | ⚪ | Trivial | style/naming, no functional impact |
 
-After reporting findings, Claude asks whether to file them as GitHub issues via `gh issue create` — it will not file issues without confirmation.
+Before reviewing anything, Claude asks you to pick a **trace mode**:
+
+- **GitHub mode (default)** — after reporting findings, asks whether to file them as GitHub issues via `gh issue create` — never files without confirmation.
+- **Local-only mode** — nothing is filed, committed, or pushed. If you want a finding fixed, Claude edits the file directly and leaves it uncommitted in your working tree for you to review, commit, or discard yourself.
 
 **Usage:**
 ```
@@ -41,7 +44,7 @@ Runs a read-only **security** review using parallel subagents — the security-o
 - `medium` (default) — 3 subagents, split by category group: input validation & injection, auth/crypto/secrets, code execution & data exposure.
 - `high` — 5+ subagents, split by category and by codebase area.
 
-Covers SQL/command/template/NoSQL injection, path traversal, auth bypass, privilege escalation, JWT/session flaws, hardcoded secrets, weak crypto, insecure deserialization, RCE, XSS, and sensitive data exposure — with a curated exclusion list (DoS, outdated deps, theoretical race conditions, etc.) and an 8/10+ confidence bar to keep noise down. Same GitHub-issue-filing flow as `/cr-run`, tagged `[security]`.
+Covers SQL/command/template/NoSQL injection, path traversal, auth bypass, privilege escalation, JWT/session flaws, hardcoded secrets, weak crypto, insecure deserialization, RCE, XSS, and sensitive data exposure — with a curated exclusion list (DoS, outdated deps, theoretical race conditions, etc.) and an 8/10+ confidence bar to keep noise down. Same GitHub-issue-filing flow (and the same local-only trace-mode option) as `/cr-run`, tagged `[security]`.
 
 The vulnerability taxonomy, severity/confidence scoring, and exclusion list are adapted from Anthropic's open-source [`claude-code-security-review`](https://github.com/anthropics/claude-code-security-review) GitHub Action (MIT licensed) — full credit to that project for the underlying security review methodology.
 
@@ -72,6 +75,12 @@ Run this before `/cr-fix` on any batch of older issues to avoid wasting tokens r
 
 Fixes GitHub issue(s), typically ones filed by `/cr-run`, and opens a pull request. This command does edit code.
 
+Before touching anything, Claude asks you to pick a **trace mode**:
+
+- **GitHub mode (default)** — branch, commit, push, open a PR, and keep the source issues linked/commented, as described below.
+- **Local-only mode** — fixes land directly on your current branch, uncommitted, in the working tree. No branch, no commit, no push, no PR, and the source issues are left untouched. Nothing about the fix is visible anywhere but your machine.
+
+In GitHub mode:
 - Re-verifies each issue is still valid before touching anything (skips stale/already-fixed ones) — for a larger batch of older issues, run `/cr-recheck` first instead of relying on this per-issue check.
 - Fixes all targeted issues on a single branch (no per-issue or per-subagent branches).
 - Runs verification (tests / exercising the code path) before committing.

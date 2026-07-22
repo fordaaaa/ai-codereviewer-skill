@@ -15,6 +15,15 @@ Argument: `$ARGUMENTS` (default `medium` if empty). This controls how many subag
 
 Scope: if the repo has a substantial uncommitted diff or the user references a PR/branch, review that diff. Otherwise review the full source tree (use judgment — ask the user if genuinely ambiguous, e.g. "review everything or just recent changes?").
 
+## Step 0.2 — choose trace mode
+
+Before doing any review work, ask the user once (`AskUserQuestion` if available, otherwise a plain question) how they want this run handled once findings are in:
+
+- **GitHub mode (default)** — normal flow: report findings, then if the user confirms in Step 3, file them as GitHub issues (or the configured tracker) per Step 4, giving a visible paper trail others can see and that `/cr-fix` can later pick up.
+- **Local-only mode** — nothing gets filed, committed, or pushed anywhere. After the Step 3 report, if the user wants any findings fixed now, apply the fix directly to the working tree yourself (Step 4b) — no branch, no commit, no push, no issue. The change sits uncommitted for the user to review, commit, or discard on their own.
+
+Carry this choice through the rest of the run — don't ask again per finding. In local-only mode, skip Step 4 (issue filing) entirely.
+
 ## Step 0.4 — load map & learned notes (optional grounding)
 
 Cheaply load persistent context before spawning subagents so a long run doesn't re-explore from scratch:
@@ -49,16 +58,20 @@ Once subagents report back, merge all findings into one list, sorted by severity
 
 ## Step 3 — report to the user
 
-Present the findings as a table or list: severity emoji, file:line, one-line summary, one-line fix suggestion. Then ask the user explicitly whether to file GitHub issues for some/all of these findings — do not create issues without this confirmation.
+Present the findings as a table or list: severity emoji, file:line, one-line summary, one-line fix suggestion. Then, per the mode chosen in Step 0.2: in **GitHub mode**, ask the user explicitly whether to file GitHub issues for some/all of these findings — do not create issues without this confirmation. In **local-only mode**, instead ask whether to apply some/all of the fixes directly to the working tree now (Step 4b).
 
-## Step 4 — file issues (only after user confirms)
+## Step 4 — file issues (GitHub mode only, after user confirms)
 
-Pick a tracker per [Tracker selection](#tracker-selection) below. List existing open items first and skip anything already filed (compare by file/line/description, not title wording). For each confirmed finding, create an item with:
+Skip this step entirely in local-only mode. Pick a tracker per [Tracker selection](#tracker-selection) below. List existing open items first and skip anything already filed (compare by file/line/description, not title wording). For each confirmed finding, create an item with:
 
 - Title: `<severity emoji> <short description> (<file>:<line>)`
 - Body: file:line, what's wrong, concrete fix suggestion, severity level (spelled out), and a severity label/tag if the tracker supports one (create new labels only if the user agrees).
 
 Report back the filed item links, and list anything left unfiled (too trivial, needs more discussion, etc).
+
+## Step 4b — local fix (local-only mode only)
+
+Skip this step entirely in GitHub mode. For each finding the user confirmed in Step 3, read the file, apply the minimal correct fix, and run tests if any exist for the affected code. Don't create a branch, don't commit, don't push — leave the edited files sitting uncommitted in the working tree. Report a short summary of what changed per finding instead of issue links or a PR.
 
 ## Step 5 — record lessons (only if learning is enabled)
 
